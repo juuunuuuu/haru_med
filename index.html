@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>@haru_med 카드뉴스 스튜디오</title>
+  <title>@haruachim_med 카드뉴스 스튜디오</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
@@ -54,7 +54,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>📸 @haru_med 카드뉴스 (일 2회)</h1>
+    <h1>📸 @haruachim_med 카드뉴스 (일 2회)</h1>
     <div class="sub" id="date-info">불러오는 중...</div>
     <div id="posts-wrapper"></div>
   </div>
@@ -74,7 +74,7 @@
           captions[pNum] = post.caption;
 
           let slidesHtml = '';
-          for (let s = 1; s <= 5; s++) {
+          for (let s = 1; s <= 6; s++) {
             const imgUrl = `./output/post${pNum}_slide_${s}.png?t=${t}`;
             slidesHtml += `
               <div class="slide-card">
