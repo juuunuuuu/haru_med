@@ -21,11 +21,7 @@ OUTPUT_DIR = "output"
 HISTORY_FILE = "output/history.json"
 LATEST_FILE = "output/latest.json"
 
-# 미세 종이 질감(Paper Grain) SVG 오버레이
-PAPER_TEXTURE_HTML = """
-<div class="paper-grain"></div>
-"""
-
+# GPU 없이도 0.1초 만에 렌더링되는 가벼운 미세 종이 직조(Linen/Paper) 텍스쳐
 SHARED_TEXTURE_CSS = """
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -37,12 +33,13 @@ SHARED_TEXTURE_CSS = """
     padding: 84px 80px;
     word-break: keep-all;
   }
-  .paper-grain {
+  .paper-weave {
     position: absolute; inset: 0;
     pointer-events: none;
-    opacity: 0.045;
     z-index: 50;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    background-image:
+      repeating-linear-gradient(0deg, rgba(15, 23, 42, 0.018) 0px, rgba(15, 23, 42, 0.018) 1px, transparent 1px, transparent 4px),
+      repeating-linear-gradient(90deg, rgba(15, 23, 42, 0.015) 0px, rgba(15, 23, 42, 0.015) 1px, transparent 1px, transparent 4px);
   }
 """
 
@@ -50,7 +47,6 @@ SHARED_TEXTURE_CSS = """
 POST_THEMES = [
     {
         "name": "Forest Teal",
-        # 표지 스타일
         "cover_bg_color": "#134E4A",
         "cover_gradient": (
             "radial-gradient(circle at 86% 16%, rgba(253, 230, 138, 0.24) 0%, rgba(253, 230, 138, 0) 44%), "
@@ -63,7 +59,6 @@ POST_THEMES = [
         "cover_badge_border": "rgba(253, 230, 138, 0.4)",
         "cover_eyebrow_color": "#5EEAD4",
         "cover_dot_color": "#FDE68A",
-        # 본문 & 개념 카드 스타일
         "page_bg": "#F4F7F5",
         "dot_rgba": "rgba(15, 118, 110, 0.09)",
         "glow_rgba": "rgba(204, 251, 241, 0.55)",
@@ -78,7 +73,6 @@ POST_THEMES = [
     },
     {
         "name": "Morning Amber",
-        # 표지 스타일
         "cover_bg_color": "#78350F",
         "cover_gradient": (
             "radial-gradient(circle at 85% 18%, rgba(254, 240, 138, 0.30) 0%, rgba(254, 240, 138, 0) 46%), "
@@ -91,7 +85,6 @@ POST_THEMES = [
         "cover_badge_border": "rgba(254, 243, 199, 0.4)",
         "cover_eyebrow_color": "#FCD34D",
         "cover_dot_color": "#FEF08A",
-        # 본문 & 개념 카드 스타일
         "page_bg": "#FAF7F2",
         "dot_rgba": "rgba(180, 83, 9, 0.08)",
         "glow_rgba": "rgba(254, 243, 199, 0.65)",
@@ -106,7 +99,6 @@ POST_THEMES = [
     },
     {
         "name": "Midnight Slate",
-        # 표지 스타일
         "cover_bg_color": "#1E293B",
         "cover_gradient": (
             "radial-gradient(circle at 86% 16%, rgba(186, 230, 253, 0.22) 0%, rgba(186, 230, 253, 0) 44%), "
@@ -119,7 +111,6 @@ POST_THEMES = [
         "cover_badge_border": "rgba(186, 230, 253, 0.38)",
         "cover_eyebrow_color": "#7DD3FC",
         "cover_dot_color": "#BAE6FD",
-        # 본문 & 개념 카드 스타일
         "page_bg": "#F4F6F9",
         "dot_rgba": "rgba(30, 58, 95, 0.08)",
         "glow_rgba": "rgba(224, 242, 254, 0.6)",
@@ -141,7 +132,7 @@ def get_recent_pmids(query: str, retmax: int = 35) -> list[str]:
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
         f"db=pubmed&term={encoded_query}&retmax={retmax}&sort=pub+date&retmode=json"
     )
-    with urllib.request.urlopen(url) as res:
+    with urllib.request.urlopen(url, timeout=30) as res:
         data = json.loads(res.read().decode("utf-8"))
         return data.get("esearchresult", {}).get("idlist", [])
 
@@ -151,7 +142,7 @@ def fetch_candidates_details(pmids: list[str]) -> list[dict]:
         return []
     ids_str = ",".join(pmids)
     url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={ids_str}&retmode=xml"
-    with urllib.request.urlopen(url) as res:
+    with urllib.request.urlopen(url, timeout=30) as res:
         xml_data = res.read()
 
     root = ET.fromstring(xml_data)
@@ -270,15 +261,6 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
     return paired
 
 
-def render_html_to_png(html_content: str, output_path: str):
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=2)
-        page.set_content(html_content, wait_until="networkidle")
-        page.screenshot(path=output_path)
-        browser.close()
-
-
 def build_cover_html(data: dict, theme: dict) -> str:
     return f"""
     <html><head><meta charset="UTF-8">
@@ -322,7 +304,7 @@ def build_cover_html(data: dict, theme: dict) -> str:
       }}
     </style></head>
     <body>
-      {PAPER_TEXTURE_HTML}
+      <div class="paper-weave"></div>
       <div class="grid-overlay"></div>
       <div class="top-bar">
         <span class="badge">{data['category']}</span>
@@ -382,7 +364,7 @@ def build_body_html(data: dict, slide: dict, page_num: int, theme: dict) -> str:
       }}
     </style></head>
     <body>
-      {PAPER_TEXTURE_HTML}
+      <div class="paper-weave"></div>
       <div class="top-bar">
         <span>하루아침_med</span>
         <span class="page-pill">{page_num} / 6</span>
@@ -456,7 +438,7 @@ def build_concepts_html(data: dict, theme: dict) -> str:
       }}
     </style></head>
     <body>
-      {PAPER_TEXTURE_HTML}
+      <div class="paper-weave"></div>
       <div class="top-bar">
         <span>하루아침_med</span>
         <span class="page-pill">6 / 6</span>
@@ -482,6 +464,7 @@ def main():
     else:
         history = []
 
+    print("1. PubMed 최신 논문 검색 중...")
     recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=35)
     unseen_pmids = [p for p in recent_pmids if p not in history][:15]
     candidates = fetch_candidates_details(unseen_pmids)
@@ -490,30 +473,40 @@ def main():
         print("새로운 후보 논문이 충분하지 않습니다.")
         return
 
+    print("2. Gemini 에디터 대본 작성 중...")
     paired_posts = create_two_card_scripts(candidates)
     today_str = datetime.now().strftime("%Y-%m-%d")
     saved_posts = []
 
-    for post_num, (chosen, script) in enumerate(paired_posts, start=1):
-        # 누적 게시물 수에 따라 3가지 테마(Forest Teal -> Morning Amber -> Midnight Slate) 순환 배정
-        theme = POST_THEMES[len(history) % len(POST_THEMES)]
+    print("3. 카드뉴스 12장 이미지 렌더링 시작...")
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=1.5)
 
-        script["post_num"] = post_num
-        script["theme_name"] = theme["name"]
-        script["journal"] = chosen["journal"]
-        script["pmid"] = chosen["pmid"]
-        script["date"] = today_str
+        for post_num, (chosen, script) in enumerate(paired_posts, start=1):
+            theme = POST_THEMES[len(history) % len(POST_THEMES)]
 
-        render_html_to_png(build_cover_html(script, theme), f"{OUTPUT_DIR}/post{post_num}_slide_1.png")
+            script["post_num"] = post_num
+            script["theme_name"] = theme["name"]
+            script["journal"] = chosen["journal"]
+            script["pmid"] = chosen["pmid"]
+            script["date"] = today_str
 
-        for idx, slide in enumerate(script["slides"], start=2):
-            render_html_to_png(build_body_html(script, slide, idx, theme), f"{OUTPUT_DIR}/post{post_num}_slide_{idx}.png")
+            page.set_content(build_cover_html(script, theme), wait_until="domcontentloaded")
+            page.screenshot(path=f"{OUTPUT_DIR}/post{post_num}_slide_1.png")
 
-        render_html_to_png(build_concepts_html(script, theme), f"{OUTPUT_DIR}/post{post_num}_slide_6.png")
+            for idx, slide in enumerate(script["slides"], start=2):
+                page.set_content(build_body_html(script, slide, idx, theme), wait_until="domcontentloaded")
+                page.screenshot(path=f"{OUTPUT_DIR}/post{post_num}_slide_{idx}.png")
 
-        history.append(chosen["pmid"])
-        saved_posts.append(script)
-        print(f"[{post_num}번째 카드뉴스 생성 완료 - {theme['name']}] {script['cover_title']}")
+            page.set_content(build_concepts_html(script, theme), wait_until="domcontentloaded")
+            page.screenshot(path=f"{OUTPUT_DIR}/post{post_num}_slide_6.png")
+
+            history.append(chosen["pmid"])
+            saved_posts.append(script)
+            print(f"[{post_num}번째 카드뉴스 6장 완료 - {theme['name']}] {script['cover_title']}")
+
+        browser.close()
 
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
