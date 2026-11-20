@@ -8,10 +8,11 @@ from google import genai
 from google.genai import types
 from playwright.sync_api import sync_playwright
 
+# 의대생·의료인 필독 주요 임상/의과학 저널 필터
 PUBMED_QUERY = (
     '("New England Journal of Medicine"[Journal] OR "Lancet"[Journal] OR '
     '"JAMA"[Journal] OR "Nature medicine"[Journal] OR "BMJ"[Journal] OR '
-    '"Neurology"[Journal] OR "Circulation"[Journal]) '
+    '"Annals of internal medicine"[Journal] OR "Neurology"[Journal] OR "Circulation"[Journal]) '
     'AND hasabstract[text] '
     'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
 )
@@ -71,13 +72,13 @@ def create_card_script(candidates: list[dict]) -> tuple[dict, dict]:
         candidates_text += f"\n--- [후보 {idx}] ---\n저널: {c['journal']}\n제목: {c['title']}\n초록:\n{c['abstract']}\n"
 
     prompt = f"""
-    당신은 최신 의학 연구와 핵심 의학 개념을 알기 쉽게 풀어주는 인스타그램 의학 카드뉴스 에디터입니다.
-    아래 후보 논문 중 **사람들이 흥미로워할 만한 임상 연구 1편**을 골라 총 5장의 카드뉴스 슬라이드 대본과 인스타 본문(캡션)을 작성해 주세요.
+    당신은 의대생과 젊은 임상의들을 위해 최신 임상 연구와 핵심 의학 개념을 명쾌하게 정리해 주는 '1분 저널클럽' 인스타그램 에디터입니다.
+    아래 후보 논문 중 **임상적 파급력과 학습 가치가 가장 높은 연구 1편**을 골라 총 5장의 카드뉴스 슬라이드 대본과 인스타 본문(캡션)을 작성해 주세요.
 
-    [작성 규칙]
-    1. 모바일 화면에서 한눈에 읽히도록 문장은 짧고 명확하게 작성하세요.
-    2. 딱딱한 통계 용어(p값, 신뢰구간 등)는 빼고, **질환의 기본 개념과 작용 기전(원리)**을 직관적으로 설명하세요.
-    3. 강조하고 싶은 핵심 키워드는 `<b>강조단어</b>` 태그로 감싸주세요 (슬라이드당 1~2곳).
+    [작성 원칙 - 의대생·의료인 타겟]
+    1. **정확한 의학 용어 사용:** 핵심 질환명, 수용체, 병태생리, 약물 기전 용어는 한국어와 영어 원어를 병기하세요. (예: 칼시토닌 유전자 관련 펩타이드(CGRP), 특발성 두개내압 상승증(IIH))
+    2. **연구 기법·통계 나열 지양:** 복잡한 p값, 신뢰구간(95% CI), 다변량 보정 모델 설명은 빼고, **임상적 기전과 환자 치료의 변화**에 집중하세요.
+    3. **카드뉴스 가독성:** 한 슬라이드당 3~4문장 이내로 간결하게 끊어 쓰고, 문단 사이는 `<br><br>`로 구분하세요. 강조할 핵심 개념은 `<b>강조단어</b>` 태그로 감싸세요 (슬라이드당 1~2곳).
 
     [후보 논문 목록]
     {candidates_text}
@@ -85,32 +86,32 @@ def create_card_script(candidates: list[dict]) -> tuple[dict, dict]:
     반드시 아래 JSON 형식으로만 응답하세요:
     {{
       "selected_index": 선택한 후보 번호 (0 ~ {len(candidates) - 1}),
-      "category": "분과 태그 (예: #신경학 #편두통)",
-      "cover_title": "표지 메인 타이틀 (호기심을 끄는 2줄 이내 헤드라인, 줄바꿈은 <br> 사용)",
-      "cover_subtitle": "표지 부제목 (1줄 요약)",
+      "category": "분과 및 핵심 키워드 (예: 신경학 · 편두통)",
+      "cover_title": "표지 메인 타이틀 (임상적 핵심이 드러나는 2줄 이내 헤드라인, 줄바꿈은 <br> 사용)",
+      "cover_subtitle": "표지 부제목 (연구의 핵심 의의를 1줄로 요약)",
       "slides": [
         {{
-          "step": "01 · 배경 개념",
-          "heading": "이 질환/상황, 왜 생길까?",
-          "body": "논문을 이해하기 위한 기본 질환 개념과 기존 치료의 한계 (3~4문장, 가독성 좋게 <br><br>로 문단 구분)"
+          "step": "01 · CLINICAL CONTEXT",
+          "heading": "질환 배경 및 기존 치료의 한계",
+          "body": "해당 질환의 핵심 병태생리와 기존 표준 치료(Standard of Care)가 가진 임상적 한계점을 설명 (3~4문장, <br><br>로 문단 구분)"
         }},
         {{
-          "step": "02 · 핵심 원리",
-          "heading": "이번 연구의 핵심 타겟",
-          "body": "논문에 등장하는 핵심 의학 개념·물질·기전(예: CGRP, 수용체, 병태생리 등)을 알기 쉽게 설명 (3~4문장, <br><br>로 문단 구분)"
+          "step": "02 · MECHANISM & TARGET",
+          "heading": "핵심 기전 및 작용 원리",
+          "body": "이 연구의 핵심 타겟(수용체, 바이오마커, 병리 기전)과 치료제/중재의 작용 원리(MOA)를 의학적으로 명쾌하게 해설 (3~4문장, <br><br>로 문단 구분)"
         }},
         {{
-          "step": "03 · 연구 결과",
-          "heading": "실제로 어떤 효과가 있었을까?",
-          "body": "연구 대상과 핵심 임상 결과를 쉬운 말로 정리 (3~4문장, <br><br>로 문단 구분)"
+          "step": "03 · KEY OUTCOMES",
+          "heading": "주요 임상 결과",
+          "body": "대상 환자군과 중재 내용, 그리고 임상적으로 의미 있는 핵심 유효성 및 안전성(이상반응) 결과를 깔끔하게 정리 (3~4문장, <br><br>로 문단 구분)"
         }},
         {{
-          "step": "04 · 오늘의 요약",
-          "heading": "한눈에 보는 핵심 정리",
-          "body": "임상적 의의와 기억해 둘 핵심 포인트 2~3가지 (3~4문장, <br><br>로 문단 구분)"
+          "step": "04 · CLINICAL PEARL",
+          "heading": "진료실 적용 & 핵심 용어 복습",
+          "body": "실제 임상 현장에서 어떤 환자에게 고려할 수 있는지(Clinical Pearl)와 함께 기억해 둘 핵심 의학 개념 1~2가지를 정리 (3~4문장, <br><br>로 문단 구분)"
         }}
       ],
-      "caption": "인스타그램 게시물 본문 (흥미를 끄는 첫 줄 + 연구 요약 + 관련 의학 개념 복습 + 출처 저널명 표기 + 하단 관련 해시태그 10개 포함)"
+      "caption": "인스타그램 게시물 본문 (핵심 요약 3줄 + 주요 의학 개념 정리 + 원문 출처(저널명, 논문 원제, PMID) + 의대생·의료인 타겟 해시태그 12개 포함: #의대생 #본과 #의학공부 #의학논문 #저널클럽 #임상의학 #전공의 등)"
     }}
     """
 
@@ -119,7 +120,7 @@ def create_card_script(candidates: list[dict]) -> tuple[dict, dict]:
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            temperature=0.4,
+            temperature=0.35,
         ),
     )
     result = json.loads(response.text)
@@ -152,18 +153,18 @@ def build_slide_html(is_cover: bool, data: dict, slide: dict = None, page_num: i
       }
       .top-bar {
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 28px; font-weight: 700; color: #0F766E;
+        font-size: 26px; font-weight: 700; letter-spacing: 0.04em; color: #0F766E;
       }
       .badge {
         background: #CCFBF1; color: #0F766E;
-        padding: 12px 26px; border-radius: 999px; font-size: 26px;
+        padding: 12px 26px; border-radius: 999px; font-size: 25px; letter-spacing: 0;
       }
       .footer {
         display: flex; justify-content: space-between; align-items: center;
         border-top: 2px solid #E2E8F0; padding-top: 32px;
         font-size: 24px; color: #64748B; font-weight: 600;
       }
-      b { color: #0F766E; background: #F0FDFA; padding: 2px 8px; border-radius: 6px; }
+      b { color: #0F766E; background: #F0FDFA; padding: 2px 8px; border-radius: 6px; font-weight: 700; }
     </style>
     """
 
@@ -171,26 +172,28 @@ def build_slide_html(is_cover: bool, data: dict, slide: dict = None, page_num: i
         return f"""
         <html><head><meta charset="UTF-8">{base_css}
         <style>
-          body {{ background: linear-gradient(145deg, #0F766E 0%, #115E59 100%); color: #FFFFFF; }}
-          .badge {{ background: rgba(255,255,255,0.18); color: #FFFFFF; }}
-          .top-bar {{ color: #CCFBF1; }}
-          .cover-main {{ my-auto; }}
-          .cover-title {{ font-size: 74px; font-weight: 800; line-height: 1.28; margin-bottom: 36px; letter-spacing: -0.02em; }}
-          .cover-sub {{ font-size: 36px; line-height: 1.55; color: #E2E8F0; font-weight: 400; }}
-          .footer {{ border-top-color: rgba(255,255,255,0.2); color: #CCFBF1; }}
+          body {{ background: linear-gradient(150deg, #0F172A 0%, #1E293B 100%); color: #FFFFFF; }}
+          .badge {{ background: rgba(45, 212, 191, 0.16); color: #2DD4BF; border: 1px solid rgba(45, 212, 191, 0.35); }}
+          .top-bar {{ color: #94A3B8; }}
+          .cover-main {{ margin: auto 0; }}
+          .eyebrow {{ font-size: 26px; font-weight: 700; color: #2DD4BF; letter-spacing: 0.08em; margin-bottom: 24px; }}
+          .cover-title {{ font-size: 70px; font-weight: 800; line-height: 1.28; margin-bottom: 36px; letter-spacing: -0.02em; }}
+          .cover-sub {{ font-size: 35px; line-height: 1.55; color: #CBD5E1; font-weight: 400; }}
+          .footer {{ border-top-color: rgba(255,255,255,0.15); color: #94A3B8; }}
         </style></head>
         <body>
           <div class="top-bar">
             <span class="badge">{data['category']}</span>
-            <span>DAILY MED BRIEF</span>
+            <span>MED JOURNAL CLUB</span>
           </div>
           <div class="cover-main">
+            <div class="eyebrow">TODAY'S CLINICAL BRIEF</div>
             <div class="cover-title">{data['cover_title']}</div>
             <div class="cover-sub">{data['cover_subtitle']}</div>
           </div>
           <div class="footer">
-            <span>출처: {data['journal']}</span>
-            <span>밀어서 개념 보기 →</span>
+            <span>{data['journal']}</span>
+            <span>밀어서 기전·임상 요약 보기 →</span>
           </div>
         </body></html>
         """
@@ -199,20 +202,21 @@ def build_slide_html(is_cover: bool, data: dict, slide: dict = None, page_num: i
         <html><head><meta charset="UTF-8">{base_css}
         <style>
           .content-box {{
-            background: #FFFFFF; border-radius: 36px; padding: 68px 60px;
-            box-shadow: 0 12px 36px rgba(15, 23, 42, 0.06);
+            background: #FFFFFF; border-radius: 32px; padding: 64px 58px;
+            box-shadow: 0 12px 36px rgba(15, 23, 42, 0.05);
             border: 2px solid #E2E8F0;
+            border-top: 10px solid #0F766E;
             flex-grow: 1; margin: 44px 0;
             display: flex; flex-direction: column; justify-content: center;
           }}
-          .step-label {{ font-size: 28px; font-weight: 800; color: #0F766E; margin-bottom: 20px; }}
-          .heading {{ font-size: 50px; font-weight: 800; line-height: 1.3; margin-bottom: 44px; color: #0F172A; }}
-          .body-text {{ font-size: 36px; line-height: 1.68; color: #334155; }}
+          .step-label {{ font-size: 25px; font-weight: 800; color: #0F766E; letter-spacing: 0.06em; margin-bottom: 18px; }}
+          .heading {{ font-size: 48px; font-weight: 800; line-height: 1.3; margin-bottom: 42px; color: #0F172A; letter-spacing: -0.01em; }}
+          .body-text {{ font-size: 35px; line-height: 1.68; color: #334155; }}
         </style></head>
         <body>
           <div class="top-bar">
-            <span>DAILY MED BRIEF</span>
-            <span>{page_num} / 5</span>
+            <span>MED JOURNAL CLUB</span>
+            <span>0{page_num} / 05</span>
           </div>
           <div class="content-box">
             <div class="step-label">{slide['step']}</div>
@@ -220,7 +224,7 @@ def build_slide_html(is_cover: bool, data: dict, slide: dict = None, page_num: i
             <div class="body-text">{slide['body']}</div>
           </div>
           <div class="footer">
-            <span>{data['journal']}</span>
+            <span>{data['journal']} · PMID {data['pmid']}</span>
             <span>@daily_med_brief</span>
           </div>
         </body></html>
@@ -248,11 +252,9 @@ def main():
     script["pmid"] = chosen["pmid"]
     script["date"] = datetime.now().strftime("%Y-%m-%d")
 
-    # 1번 표지 렌더링
     cover_html = build_slide_html(is_cover=True, data=script)
     render_html_to_png(cover_html, f"{OUTPUT_DIR}/slide_1.png")
 
-    # 2~5번 본문 카드 렌더링
     for idx, slide in enumerate(script["slides"], start=2):
         slide_html = build_slide_html(is_cover=False, data=script, slide=slide, page_num=idx)
         render_html_to_png(slide_html, f"{OUTPUT_DIR}/slide_{idx}.png")
@@ -264,7 +266,7 @@ def main():
     with open(LATEST_FILE, "w", encoding="utf-8") as f:
         json.dump(script, f, ensure_ascii=False, indent=2)
 
-    print(f"카드뉴스 5장 생성 완료: {script['cover_title']}")
+    print(f"의대생·의료인 타겟 카드뉴스 5장 생성 완료: {script['cover_title']}")
 
 
 if __name__ == "__main__":
