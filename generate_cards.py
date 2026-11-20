@@ -21,6 +21,119 @@ OUTPUT_DIR = "output"
 HISTORY_FILE = "output/history.json"
 LATEST_FILE = "output/latest.json"
 
+# 미세 종이 질감(Paper Grain) SVG 오버레이
+PAPER_TEXTURE_HTML = """
+<div class="paper-grain"></div>
+"""
+
+SHARED_TEXTURE_CSS = """
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1080px; height: 1350px;
+    font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column; justify-content: space-between;
+    padding: 84px 80px;
+    word-break: keep-all;
+  }
+  .paper-grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    opacity: 0.045;
+    z-index: 50;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+"""
+
+# 게시물별 순환 적용할 3가지 컬러 & 텍스쳐 테마
+POST_THEMES = [
+    {
+        "name": "Forest Teal",
+        # 표지 스타일
+        "cover_bg_color": "#134E4A",
+        "cover_gradient": (
+            "radial-gradient(circle at 86% 16%, rgba(253, 230, 138, 0.24) 0%, rgba(253, 230, 138, 0) 44%), "
+            "radial-gradient(circle at 12% 88%, rgba(45, 212, 191, 0.22) 0%, rgba(15, 23, 42, 0.65) 75%), "
+            "linear-gradient(155deg, #134E4A 0%, #0D3B38 55%, #0F172A 100%)"
+        ),
+        "cover_top_color": "#A7F3D0",
+        "cover_badge_bg": "rgba(253, 230, 138, 0.16)",
+        "cover_badge_color": "#FDE68A",
+        "cover_badge_border": "rgba(253, 230, 138, 0.4)",
+        "cover_eyebrow_color": "#5EEAD4",
+        "cover_dot_color": "#FDE68A",
+        # 본문 & 개념 카드 스타일
+        "page_bg": "#F4F7F5",
+        "dot_rgba": "rgba(15, 118, 110, 0.09)",
+        "glow_rgba": "rgba(204, 251, 241, 0.55)",
+        "primary": "#0F766E",
+        "primary_dark": "#134E4A",
+        "pill_bg": "#E6F4F1",
+        "bold_color": "#0F766E",
+        "bold_bg": "#E6F4F1",
+        "card_border": "rgba(19, 78, 74, 0.12)",
+        "card_shadow": "rgba(19, 78, 74, 0.06)",
+        "concept_accents": ["#0F766E", "#115E59", "#0D9488"],
+    },
+    {
+        "name": "Morning Amber",
+        # 표지 스타일
+        "cover_bg_color": "#78350F",
+        "cover_gradient": (
+            "radial-gradient(circle at 85% 18%, rgba(254, 240, 138, 0.30) 0%, rgba(254, 240, 138, 0) 46%), "
+            "radial-gradient(circle at 15% 88%, rgba(217, 119, 6, 0.28) 0%, rgba(28, 25, 23, 0.72) 75%), "
+            "linear-gradient(155deg, #78350F 0%, #5C280B 52%, #1C1917 100%)"
+        ),
+        "cover_top_color": "#FDE68A",
+        "cover_badge_bg": "rgba(254, 243, 199, 0.16)",
+        "cover_badge_color": "#FEF3C7",
+        "cover_badge_border": "rgba(254, 243, 199, 0.4)",
+        "cover_eyebrow_color": "#FCD34D",
+        "cover_dot_color": "#FEF08A",
+        # 본문 & 개념 카드 스타일
+        "page_bg": "#FAF7F2",
+        "dot_rgba": "rgba(180, 83, 9, 0.08)",
+        "glow_rgba": "rgba(254, 243, 199, 0.65)",
+        "primary": "#B45309",
+        "primary_dark": "#78350F",
+        "pill_bg": "#FEF3C7",
+        "bold_color": "#92400E",
+        "bold_bg": "#FEF3C7",
+        "card_border": "rgba(120, 53, 15, 0.12)",
+        "card_shadow": "rgba(120, 53, 15, 0.06)",
+        "concept_accents": ["#B45309", "#D97706", "#92400E"],
+    },
+    {
+        "name": "Midnight Slate",
+        # 표지 스타일
+        "cover_bg_color": "#1E293B",
+        "cover_gradient": (
+            "radial-gradient(circle at 86% 16%, rgba(186, 230, 253, 0.22) 0%, rgba(186, 230, 253, 0) 44%), "
+            "radial-gradient(circle at 12% 88%, rgba(56, 189, 248, 0.18) 0%, rgba(15, 23, 42, 0.75) 75%), "
+            "linear-gradient(155deg, #1E3A5F 0%, #1E293B 55%, #0F172A 100%)"
+        ),
+        "cover_top_color": "#BAE6FD",
+        "cover_badge_bg": "rgba(186, 230, 253, 0.16)",
+        "cover_badge_color": "#E0F2FE",
+        "cover_badge_border": "rgba(186, 230, 253, 0.38)",
+        "cover_eyebrow_color": "#7DD3FC",
+        "cover_dot_color": "#BAE6FD",
+        # 본문 & 개념 카드 스타일
+        "page_bg": "#F4F6F9",
+        "dot_rgba": "rgba(30, 58, 95, 0.08)",
+        "glow_rgba": "rgba(224, 242, 254, 0.6)",
+        "primary": "#1E40AF",
+        "primary_dark": "#1E293B",
+        "pill_bg": "#DBEAFE",
+        "bold_color": "#1E3A8A",
+        "bold_bg": "#DBEAFE",
+        "card_border": "rgba(30, 41, 59, 0.12)",
+        "card_shadow": "rgba(30, 41, 59, 0.06)",
+        "concept_accents": ["#1E40AF", "#1D4ED8", "#0369A1"],
+    },
+]
+
 
 def get_recent_pmids(query: str, retmax: int = 35) -> list[str]:
     encoded_query = urllib.parse.quote(query)
@@ -125,7 +238,7 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
               "explanation": "교과서적인 딱딱한 정의 대신, 임상적 맥락에서 왜 중요한지 쉽게 풀어쓴 설명 (2문장 이내)"
             }}
           ],
-          "caption": "인스타그램 게시물 본문 (따뜻한 도입부 + 오늘의 연구 요약 + 관련 의학 개념 복습 + 출처(저널명, 논문 원제, PMID) + 해시태그 12개: #하루아침_med #의대생 #의학공부 #임상의학 #의학논문 #저널클럽 #건강의학 #전공의 #의학지식 #북스타그램 등)"
+          "caption": "인스타그램 게시물 본문 (따뜻한 도입부 + 오늘의 연구 요약 + 관련 의학 개념 복습 + 출처(저널명, 논문 원제, PMID) + 면책문구 + 해시태그 12개: #하루아침_med #의대생 #의학공부 #임상의학 #의학논문 #저널클럽 #건강의학 #전공의 #의학지식 #북스타그램 등)"
         }}
       ]
     }}
@@ -166,45 +279,57 @@ def render_html_to_png(html_content: str, output_path: str):
         browser.close()
 
 
-def build_cover_html(data: dict) -> str:
+def build_cover_html(data: dict, theme: dict) -> str:
     return f"""
     <html><head><meta charset="UTF-8">
     <style>
-      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      {SHARED_TEXTURE_CSS}
       body {{
-        width: 1080px; height: 1350px;
-        font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
-        background: linear-gradient(155deg, #134E4A 0%, #0F172A 100%);
+        background-color: {theme['cover_bg_color']};
+        background-image: {theme['cover_gradient']};
         color: #FFFFFF;
-        display: flex; flex-direction: column; justify-content: space-between;
-        padding: 84px 80px; word-break: keep-all;
+      }}
+      .grid-overlay {{
+        position: absolute; inset: 0; pointer-events: none;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px);
+        background-size: 32px 32px;
       }}
       .top-bar {{
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: #99F6E4;
+        font-size: 26px; font-weight: 700; color: {theme['cover_top_color']}; z-index: 2;
       }}
       .badge {{
-        background: rgba(45, 212, 191, 0.18); color: #5EEAD4;
-        border: 1px solid rgba(94, 234, 212, 0.35);
+        background: {theme['cover_badge_bg']}; color: {theme['cover_badge_color']};
+        border: 1px solid {theme['cover_badge_border']};
         padding: 12px 26px; border-radius: 999px; font-size: 25px;
       }}
-      .cover-main {{ margin: auto 0; }}
-      .eyebrow {{ font-size: 26px; font-weight: 600; color: #5EEAD4; margin-bottom: 24px; }}
+      .cover-main {{ margin: auto 0; z-index: 2; }}
+      .eyebrow {{
+        display: inline-flex; align-items: center; gap: 10px;
+        font-size: 25px; font-weight: 700; color: {theme['cover_eyebrow_color']};
+        letter-spacing: 0.06em; margin-bottom: 26px;
+      }}
+      .sun-dot {{
+        width: 14px; height: 14px; border-radius: 50%;
+        background: {theme['cover_dot_color']}; display: inline-block;
+      }}
       .cover-title {{ font-size: 68px; font-weight: 800; line-height: 1.32; margin-bottom: 36px; letter-spacing: -0.02em; }}
-      .cover-sub {{ font-size: 35px; line-height: 1.6; color: #E2E8F0; font-weight: 400; }}
+      .cover-sub {{ font-size: 35px; line-height: 1.62; color: #E2E8F0; font-weight: 400; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid rgba(255,255,255,0.16); padding-top: 32px;
-        font-size: 24px; color: #CBD5E1; font-weight: 600;
+        border-top: 2px solid rgba(255,255,255,0.18); padding-top: 32px;
+        font-size: 24px; color: #CBD5E1; font-weight: 600; z-index: 2;
       }}
     </style></head>
     <body>
+      {PAPER_TEXTURE_HTML}
+      <div class="grid-overlay"></div>
       <div class="top-bar">
         <span class="badge">{data['category']}</span>
         <span>하루아침_med</span>
       </div>
       <div class="cover-main">
-        <div class="eyebrow">TODAY'S CLINICAL STORY</div>
+        <div class="eyebrow"><span class="sun-dot"></span> TODAY'S CLINICAL STORY</div>
         <div class="cover-title">{data['cover_title']}</div>
         <div class="cover-sub">{data['cover_subtitle']}</div>
       </div>
@@ -216,44 +341,51 @@ def build_cover_html(data: dict) -> str:
     """
 
 
-def build_body_html(data: dict, slide: dict, page_num: int) -> str:
+def build_body_html(data: dict, slide: dict, page_num: int, theme: dict) -> str:
     return f"""
     <html><head><meta charset="UTF-8">
     <style>
-      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      {SHARED_TEXTURE_CSS}
       body {{
-        width: 1080px; height: 1350px;
-        font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
-        background: #F8FAFC; color: #1E293B;
-        display: flex; flex-direction: column; justify-content: space-between;
-        padding: 84px 80px; word-break: keep-all;
+        background-color: {theme['page_bg']};
+        background-image:
+          radial-gradient(circle at 90% 10%, {theme['glow_rgba']} 0%, transparent 45%),
+          radial-gradient({theme['dot_rgba']} 1.5px, transparent 1.5px);
+        background-size: 100% 100%, 28px 28px;
+        color: #1E293B;
       }}
       .top-bar {{
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: #0F766E;
+        font-size: 26px; font-weight: 700; color: {theme['primary_dark']}; z-index: 2;
+      }}
+      .page-pill {{
+        background: {theme['pill_bg']}; color: {theme['primary']};
+        padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .content-box {{
         background: #FFFFFF; border-radius: 32px; padding: 64px 58px;
-        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.05);
-        border: 2px solid #E2E8F0;
-        border-top: 10px solid #0F766E;
-        flex-grow: 1; margin: 44px 0;
+        box-shadow: 0 14px 36px {theme['card_shadow']};
+        border: 2px solid {theme['card_border']};
+        border-top: 12px solid {theme['primary']};
+        flex-grow: 1; margin: 42px 0;
         display: flex; flex-direction: column; justify-content: center;
+        z-index: 2;
       }}
-      .step-label {{ font-size: 26px; font-weight: 800; color: #0F766E; margin-bottom: 18px; }}
+      .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 18px; }}
       .heading {{ font-size: 46px; font-weight: 800; line-height: 1.34; margin-bottom: 40px; color: #0F172A; letter-spacing: -0.01em; }}
       .body-text {{ font-size: 35px; line-height: 1.72; color: #334155; }}
-      b {{ color: #0F766E; background: #F0FDFA; padding: 3px 9px; border-radius: 6px; font-weight: 700; }}
+      b {{ color: {theme['bold_color']}; background: {theme['bold_bg']}; padding: 3px 10px; border-radius: 7px; font-weight: 700; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid #E2E8F0; padding-top: 32px;
-        font-size: 24px; color: #64748B; font-weight: 600;
+        border-top: 2px solid {theme['card_border']}; padding-top: 32px;
+        font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
       }}
     </style></head>
     <body>
+      {PAPER_TEXTURE_HTML}
       <div class="top-bar">
         <span>하루아침_med</span>
-        <span>{page_num} / 6</span>
+        <span class="page-pill">{page_num} / 6</span>
       </div>
       <div class="content-box">
         <div class="step-label">{slide['step']}</div>
@@ -268,13 +400,15 @@ def build_body_html(data: dict, slide: dict, page_num: int) -> str:
     """
 
 
-def build_concepts_html(data: dict) -> str:
+def build_concepts_html(data: dict, theme: dict) -> str:
     concepts = data.get("key_concepts", [])[:3]
+    accents = theme["concept_accents"]
     cards_html = ""
-    for c in concepts:
+    for idx, c in enumerate(concepts):
+        c_color = accents[idx % len(accents)]
         cards_html += f"""
-        <div class="concept-card">
-          <div class="concept-term">{c['term']}</div>
+        <div class="concept-card" style="border-left-color: {c_color};">
+          <div class="concept-term" style="color: {c_color};">{c['term']}</div>
           <div class="concept-desc">{c['explanation']}</div>
         </div>
         """
@@ -282,43 +416,50 @@ def build_concepts_html(data: dict) -> str:
     return f"""
     <html><head><meta charset="UTF-8">
     <style>
-      * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+      {SHARED_TEXTURE_CSS}
       body {{
-        width: 1080px; height: 1350px;
-        font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
-        background: #F8FAFC; color: #1E293B;
-        display: flex; flex-direction: column; justify-content: space-between;
-        padding: 84px 80px; word-break: keep-all;
+        background-color: {theme['page_bg']};
+        background-image:
+          radial-gradient(circle at 90% 10%, {theme['glow_rgba']} 0%, transparent 45%),
+          radial-gradient({theme['dot_rgba']} 1.5px, transparent 1.5px);
+        background-size: 100% 100%, 28px 28px;
+        color: #1E293B;
       }}
       .top-bar {{
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: #0F766E;
+        font-size: 26px; font-weight: 700; color: {theme['primary_dark']}; z-index: 2;
+      }}
+      .page-pill {{
+        background: {theme['pill_bg']}; color: {theme['primary']};
+        padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .main-area {{
-        flex-grow: 1; margin: 40px 0;
+        flex-grow: 1; margin: 38px 0;
         display: flex; flex-direction: column; justify-content: center;
+        z-index: 2;
       }}
-      .step-label {{ font-size: 26px; font-weight: 800; color: #0F766E; margin-bottom: 14px; }}
+      .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 14px; }}
       .heading {{ font-size: 44px; font-weight: 800; line-height: 1.3; margin-bottom: 34px; color: #0F172A; }}
       .concept-card {{
         background: #FFFFFF; border-radius: 24px; padding: 34px 38px;
-        border: 2px solid #E2E8F0; border-left: 10px solid #0F766E;
+        border: 2px solid {theme['card_border']}; border-left: 11px solid {theme['primary']};
         margin-bottom: 24px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 10px 26px {theme['card_shadow']};
       }}
       .concept-card:last-child {{ margin-bottom: 0; }}
-      .concept-term {{ font-size: 32px; font-weight: 800; color: #0F766E; margin-bottom: 12px; }}
-      .concept-desc {{ font-size: 29px; line-height: 1.6; color: #334155; }}
+      .concept-term {{ font-size: 32px; font-weight: 800; margin-bottom: 12px; }}
+      .concept-desc {{ font-size: 29px; line-height: 1.62; color: #334155; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid #E2E8F0; padding-top: 32px;
-        font-size: 24px; color: #64748B; font-weight: 600;
+        border-top: 2px solid {theme['card_border']}; padding-top: 32px;
+        font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
       }}
     </style></head>
     <body>
+      {PAPER_TEXTURE_HTML}
       <div class="top-bar">
         <span>하루아침_med</span>
-        <span>6 / 6</span>
+        <span class="page-pill">6 / 6</span>
       </div>
       <div class="main-area">
         <div class="step-label">05 · KEY MEDICAL CONCEPTS</div>
@@ -354,24 +495,25 @@ def main():
     saved_posts = []
 
     for post_num, (chosen, script) in enumerate(paired_posts, start=1):
+        # 누적 게시물 수에 따라 3가지 테마(Forest Teal -> Morning Amber -> Midnight Slate) 순환 배정
+        theme = POST_THEMES[len(history) % len(POST_THEMES)]
+
         script["post_num"] = post_num
+        script["theme_name"] = theme["name"]
         script["journal"] = chosen["journal"]
         script["pmid"] = chosen["pmid"]
         script["date"] = today_str
 
-        # 1번 표지 렌더링
-        render_html_to_png(build_cover_html(script), f"{OUTPUT_DIR}/post{post_num}_slide_1.png")
+        render_html_to_png(build_cover_html(script, theme), f"{OUTPUT_DIR}/post{post_num}_slide_1.png")
 
-        # 2~5번 본문 카드 렌더링
         for idx, slide in enumerate(script["slides"], start=2):
-            render_html_to_png(build_body_html(script, slide, idx), f"{OUTPUT_DIR}/post{post_num}_slide_{idx}.png")
+            render_html_to_png(build_body_html(script, slide, idx, theme), f"{OUTPUT_DIR}/post{post_num}_slide_{idx}.png")
 
-        # 6번 핵심 의학 개념 정리 카드 렌더링
-        render_html_to_png(build_concepts_html(script), f"{OUTPUT_DIR}/post{post_num}_slide_6.png")
+        render_html_to_png(build_concepts_html(script, theme), f"{OUTPUT_DIR}/post{post_num}_slide_6.png")
 
         history.append(chosen["pmid"])
         saved_posts.append(script)
-        print(f"[{post_num}번째 카드뉴스 6장 생성 완료] {script['cover_title']}")
+        print(f"[{post_num}번째 카드뉴스 생성 완료 - {theme['name']}] {script['cover_title']}")
 
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
