@@ -8,12 +8,12 @@ from google import genai
 from google.genai import types
 from playwright.sync_api import sync_playwright
 
-# 의학 전반의 최상위 임상·의과학 저널 필터
+# 의학 전 분야(내과·외과·소아·산부인과·정신·신경·감염·종양 등)를 아우르는 최상위 종합 임상 저널 필터
 PUBMED_QUERY = (
     '("New England Journal of Medicine"[Journal] OR "Lancet"[Journal] OR '
     '"JAMA"[Journal] OR "Nature medicine"[Journal] OR "BMJ"[Journal] OR '
-    '"Annals of internal medicine"[Journal] OR "Circulation"[Journal] OR '
-    '"Neurology"[Journal] OR "Gastroenterology"[Journal] OR "JAMA internal medicine"[Journal]) '
+    '"Annals of internal medicine"[Journal] OR "JAMA internal medicine"[Journal] OR '
+    '"PLoS medicine"[Journal]) '
     'AND hasabstract[text] '
     'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
 )
@@ -21,16 +21,17 @@ OUTPUT_DIR = "output"
 HISTORY_FILE = "output/history.json"
 LATEST_FILE = "output/latest.json"
 
-# GPU 없이도 0.1초 만에 렌더링되는 가벼운 미세 종이 직조(Linen/Paper) 텍스쳐
+# 인스타그램 피드 권장 4:5 비율 (1080 x 1350) + 가벼운 미세 종이 질감
 SHARED_TEXTURE_CSS = """
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
+  html, body {
     width: 1080px; height: 1350px;
+    aspect-ratio: 4 / 5;
     font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
     position: relative;
     overflow: hidden;
     display: flex; flex-direction: column; justify-content: space-between;
-    padding: 84px 80px;
+    padding: 80px 76px;
     word-break: keep-all;
   }
   .paper-weave {
@@ -126,7 +127,7 @@ POST_THEMES = [
 ]
 
 
-def get_recent_pmids(query: str, retmax: int = 35) -> list[str]:
+def get_recent_pmids(query: str, retmax: int = 50) -> list[str]:
     encoded_query = urllib.parse.quote(query)
     url = (
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
@@ -180,20 +181,21 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
     당신은 인스타그램 '@haruachim_med' 계정을 운영하는 의학 에디터입니다.
     의대생과 의료인이 환자의 질문에 최신 근거를 더해 답할 수 있도록, **연구 논문과 에세이 사이의 따뜻하고 명쾌한 어조**로 하루 2개의 게시물(각 6장 분량)을 작성해 주세요.
 
-    [1. 논문 2편 선별 기준]
-    - 아래 {len(candidates)}개의 후보 중 **서로 다른 의학 분야이면서 임상적·학술적 비중이 가장 큰 연구 2편**을 고르세요.
+    [1. 논문 2편 선별 기준 - 매우 중요]
+    - 아래 {len(candidates)}개의 후보 중 **반드시 서로 다른 임상 분과(예: 순환기내과 + 소화기내과, 내분비내과 + 호흡기내과, 종양내과 + 감염내과, 산부인과 + 소아청소년과 등)**에서 각각 1편씩 총 2편을 고르세요.
+    - 두 편이 같은 분과에 속하면 절대 안 되며, 특정 한 분과에 치우치지 않고 의학 전 분야를 골고루 다루세요.
     - 대규모 코호트/임상시험(RCT), 기존의 의학적 통념을 검증하거나 뒤집는 연구, 주요 질환의 새로운 치료 패러다임을 제시하는 연구를 최우선으로 선택하세요.
 
-    [2. 문체 및 작성 원칙 - 매우 중요]
+    [2. 문체 및 작성 원칙]
     - **딱딱한 논문 요약투 금지:** "본 연구는 ~를 평가하고자 하였다", "통계적으로 유의한 차이를 보였다(p<0.001)" 같은 건조한 번역투를 절대 쓰지 마세요.
     - **이야기하듯 풀어쓰기:** 실제 진료실에서 환자가 던지는 질문이나 임상 현장의 궁금증에서 수필처럼 자연스럽게 이야기를 시작하세요.
-    - **가독성:** 각 슬라이드 본문은 3~4문장 이내로 호흡을 짧게 끊고, 문단 사이는 `<br><br>`로 나누세요. 핵심 구절은 `<b>강조할 내용</b>` 태그로 감싸세요 (슬라이드당 1~2곳).
+    - **가독성 (4:5 카드 비율 최적화):** 각 슬라이드 본문은 3~4문장 이내로 호흡을 짧게 끊고, 문단 사이는 `<br><br>`로 나누세요. 핵심 구절은 `<b>강조할 내용</b>` 태그로 감싸세요 (슬라이드당 1~2곳).
     - **6번째 슬라이드(핵심 의학 개념 정리):** 통계·역학·연구방법론 용어는 절대 넣지 말고, 질환의 병태생리·생리학·약물 작용 기전(MOA) 등 **순수 의학 개념 2~3가지(영어 원어 병기)**만 알기 쉽게 정리하세요.
 
     [후보 논문 목록]
     {candidates_text}
 
-    반드시 아래 JSON 형식으로만 응답하세요 (posts 배열 안에 정확히 2개의 서로 다른 논문 브리핑 포함):
+    반드시 아래 JSON 형식으로만 응답하세요 (posts 배열 안에 정확히 2개의 서로 다른 분과 논문 브리핑 포함):
     {{
       "posts": [
         {{
@@ -240,7 +242,7 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            temperature=0.45,
+            temperature=0.5,
         ),
     )
     result = json.loads(response.text)
@@ -295,11 +297,11 @@ def build_cover_html(data: dict, theme: dict) -> str:
         width: 14px; height: 14px; border-radius: 50%;
         background: {theme['cover_dot_color']}; display: inline-block;
       }}
-      .cover-title {{ font-size: 68px; font-weight: 800; line-height: 1.32; margin-bottom: 36px; letter-spacing: -0.02em; }}
-      .cover-sub {{ font-size: 35px; line-height: 1.62; color: #E2E8F0; font-weight: 400; }}
+      .cover-title {{ font-size: 66px; font-weight: 800; line-height: 1.32; margin-bottom: 34px; letter-spacing: -0.02em; }}
+      .cover-sub {{ font-size: 34px; line-height: 1.6; color: #E2E8F0; font-weight: 400; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid rgba(255,255,255,0.18); padding-top: 32px;
+        border-top: 2px solid rgba(255,255,255,0.18); padding-top: 30px;
         font-size: 24px; color: #CBD5E1; font-weight: 600; z-index: 2;
       }}
     </style></head>
@@ -345,21 +347,21 @@ def build_body_html(data: dict, slide: dict, page_num: int, theme: dict) -> str:
         padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .content-box {{
-        background: #FFFFFF; border-radius: 32px; padding: 64px 58px;
+        background: #FFFFFF; border-radius: 32px; padding: 58px 54px;
         box-shadow: 0 14px 36px {theme['card_shadow']};
         border: 2px solid {theme['card_border']};
         border-top: 12px solid {theme['primary']};
-        flex-grow: 1; margin: 42px 0;
+        flex-grow: 1; margin: 38px 0;
         display: flex; flex-direction: column; justify-content: center;
         z-index: 2;
       }}
-      .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 18px; }}
-      .heading {{ font-size: 46px; font-weight: 800; line-height: 1.34; margin-bottom: 40px; color: #0F172A; letter-spacing: -0.01em; }}
-      .body-text {{ font-size: 35px; line-height: 1.72; color: #334155; }}
+      .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 16px; }}
+      .heading {{ font-size: 45px; font-weight: 800; line-height: 1.34; margin-bottom: 36px; color: #0F172A; letter-spacing: -0.01em; }}
+      .body-text {{ font-size: 34px; line-height: 1.7; color: #334155; }}
       b {{ color: {theme['bold_color']}; background: {theme['bold_bg']}; padding: 3px 10px; border-radius: 7px; font-weight: 700; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid {theme['card_border']}; padding-top: 32px;
+        border-top: 2px solid {theme['card_border']}; padding-top: 30px;
         font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
       }}
     </style></head>
@@ -416,24 +418,24 @@ def build_concepts_html(data: dict, theme: dict) -> str:
         padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .main-area {{
-        flex-grow: 1; margin: 38px 0;
+        flex-grow: 1; margin: 34px 0;
         display: flex; flex-direction: column; justify-content: center;
         z-index: 2;
       }}
       .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 14px; }}
-      .heading {{ font-size: 44px; font-weight: 800; line-height: 1.3; margin-bottom: 34px; color: #0F172A; }}
+      .heading {{ font-size: 44px; font-weight: 800; line-height: 1.3; margin-bottom: 32px; color: #0F172A; }}
       .concept-card {{
-        background: #FFFFFF; border-radius: 24px; padding: 34px 38px;
+        background: #FFFFFF; border-radius: 24px; padding: 32px 36px;
         border: 2px solid {theme['card_border']}; border-left: 11px solid {theme['primary']};
-        margin-bottom: 24px;
+        margin-bottom: 22px;
         box-shadow: 0 10px 26px {theme['card_shadow']};
       }}
       .concept-card:last-child {{ margin-bottom: 0; }}
-      .concept-term {{ font-size: 32px; font-weight: 800; margin-bottom: 12px; }}
-      .concept-desc {{ font-size: 29px; line-height: 1.62; color: #334155; }}
+      .concept-term {{ font-size: 31px; font-weight: 800; margin-bottom: 10px; }}
+      .concept-desc {{ font-size: 28px; line-height: 1.6; color: #334155; }}
       .footer {{
         display: flex; justify-content: space-between; align-items: center;
-        border-top: 2px solid {theme['card_border']}; padding-top: 32px;
+        border-top: 2px solid {theme['card_border']}; padding-top: 30px;
         font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
       }}
     </style></head>
@@ -464,9 +466,9 @@ def main():
     else:
         history = []
 
-    print("1. PubMed 최신 논문 검색 중...")
-    recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=35)
-    unseen_pmids = [p for p in recent_pmids if p not in history][:15]
+    print("1. PubMed 전 분과 최신 논문 검색 중...")
+    recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=50)
+    unseen_pmids = [p for p in recent_pmids if p not in history][:25]
     candidates = fetch_candidates_details(unseen_pmids)
 
     if len(candidates) < 2:
@@ -478,7 +480,7 @@ def main():
     today_str = datetime.now().strftime("%Y-%m-%d")
     saved_posts = []
 
-    print("3. 카드뉴스 12장 이미지 렌더링 시작...")
+    print("3. 카드뉴스 12장(4:5 비율) 이미지 렌더링 시작...")
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=1.5)
