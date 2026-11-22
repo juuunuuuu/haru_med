@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>@haruachim_med 카드뉴스 스튜디오</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
       background: #f1f5f9; color: #0f172a; margin: 0; padding: 20px 16px 64px;
@@ -23,31 +24,42 @@
     }
     .post-meta { font-size: 0.82rem; color: #64748b; margin-bottom: 14px; }
     .slider {
-      display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px;
+      display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px;
       scroll-snap-type: x mandatory;
     }
     .slide-card {
-      flex: 0 0 80%; scroll-snap-align: center;
-      background: #f8fafc; border-radius: 12px; overflow: hidden;
-      border: 1px solid #e2e8f0; text-align: center;
+      flex: 0 0 78%; scroll-snap-align: center;
+      aspect-ratio: 4 / 5;
+      background: #f8fafc; border-radius: 14px; overflow: hidden;
+      border: 1px solid #e2e8f0; position: relative;
     }
-    .slide-card img { width: 100%; display: block; }
-    .dl-btn {
-      display: block; padding: 10px; background: #0f766e; color: #fff;
-      text-decoration: none; font-size: 0.84rem; font-weight: 600;
+    .slide-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .page-tag {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(15, 23, 42, 0.65); color: #fff;
+      font-size: 0.74rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
     }
-    .caption-box { margin-top: 16px; }
+    .dl-all-btn {
+      display: block; width: 100%; margin-top: 12px; padding: 13px 16px;
+      background: #0f766e; color: #fff; border: none; border-radius: 12px;
+      font-size: 0.94rem; font-weight: 700; cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .dl-all-btn:active { background: #115e59; }
+    .dl-all-btn:disabled { background: #64748b; cursor: wait; }
+    .caption-box { margin-top: 18px; }
     .caption-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
-      font-size: 0.9rem;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      margin-bottom: 8px; font-size: 0.9rem;
     }
     button.copy-btn {
+      flex-shrink: 0;
       background: #0f766e; color: #fff; border: none; padding: 7px 14px;
       border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer;
     }
     pre {
-      white-space: pre-wrap; font-family: inherit; font-size: 0.88rem;
-      line-height: 1.62; color: #334155; background: #f8fafc;
+      white-space: pre-wrap; word-break: break-word; font-family: inherit;
+      font-size: 0.88rem; line-height: 1.62; color: #334155; background: #f8fafc;
       padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0; margin: 0;
     }
   </style>
@@ -78,8 +90,8 @@
             const imgUrl = `./output/post${pNum}_slide_${s}.png?t=${t}`;
             slidesHtml += `
               <div class="slide-card">
+                <span class="page-tag">${s} / 6</span>
                 <img src="${imgUrl}" alt="피드${pNum} 슬라이드${s}" />
-                <a class="dl-btn" href="${imgUrl}" download="post${pNum}_slide_${s}.png">슬라이드 ${s} 저장</a>
               </div>
             `;
           }
@@ -89,6 +101,9 @@
               <span class="post-badge">피드 #${pNum} · ${post.category}</span>
               <div class="post-meta">${post.journal} (PMID: ${post.pmid})</div>
               <div class="slider">${slidesHtml}</div>
+              <button class="dl-all-btn" id="dl-btn-${pNum}" onclick="downloadAllSlides(${pNum})">
+                📥 슬라이드 6장 전체 저장
+              </button>
               <div class="caption-box">
                 <div class="caption-header">
                   <strong>피드 #${pNum} 본문 & 해시태그</strong>
@@ -103,6 +118,39 @@
       .catch(() => {
         document.getElementById('date-info').textContent = '아직 생성된 카드뉴스가 없습니다. GitHub Actions를 실행해 주세요.';
       });
+
+    async function downloadAllSlides(pNum) {
+      const btn = document.getElementById(`dl-btn-${pNum}`);
+      btn.disabled = true;
+
+      try {
+        for (let s = 1; s <= 6; s++) {
+          btn.textContent = `⏳ 저장 중... (${s} / 6)`;
+          const res = await fetch(`./output/post${pNum}_slide_${s}.png?t=${Date.now()}`);
+          const blob = await res.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `post${pNum}_slide_${s}.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          await new Promise(resolve => setTimeout(resolve, 350));
+        }
+        btn.textContent = '✅ 6장 전체 저장 완료!';
+      } catch (e) {
+        alert('이미지 다운로드 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        btn.textContent = '📥 슬라이드 6장 전체 저장';
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '📥 슬라이드 6장 전체 저장';
+        }, 2500);
+      }
+    }
 
     function copyCaption(pNum) {
       navigator.clipboard.writeText(captions[pNum]).then(() => {
