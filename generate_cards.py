@@ -8,12 +8,12 @@ from google import genai
 from google.genai import types
 from playwright.sync_api import sync_playwright
 
-# 의학 전 분야(내과·외과·소아·산부인과·정신·신경·감염·종양 등)를 아우르는 최상위 종합 임상 저널 필터
+# 의학 전 분야를 아우르는 최상위 종합 임상 저널 필터
 PUBMED_QUERY = (
     '("New England Journal of Medicine"[Journal] OR "Lancet"[Journal] OR '
     '"JAMA"[Journal] OR "Nature medicine"[Journal] OR "BMJ"[Journal] OR '
     '"Annals of internal medicine"[Journal] OR "JAMA internal medicine"[Journal] OR '
-    '"PLoS medicine"[Journal]) '
+    '"PLoS medicine"[Journal] OR "JAMA pediatrics"[Journal]) '
     'AND hasabstract[text] '
     'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
 )
@@ -143,7 +143,7 @@ POST_THEMES = [
 ]
 
 
-def get_recent_pmids(query: str, retmax: int = 50) -> list[str]:
+def get_recent_pmids(query: str, retmax: int = 80) -> list[str]:
     encoded_query = urllib.parse.quote(query)
     url = (
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
@@ -194,17 +194,27 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
         candidates_text += f"\n--- [후보 {idx}] ---\n저널: {c['journal']}\n제목: {c['title']}\n초록:\n{c['abstract']}\n"
 
     prompt = f"""
-    당신은 인스타그램 '@haruachim_med' 계정을 운영하는 의학 에디터입니다.
-    의대생과 의료인이 환자의 질문에 최신 근거를 더해 답할 수 있도록, **연구 논문과 에세이 사이의 따뜻하고 명쾌한 어조**로 하루 2개의 게시물(각 6장 분량)을 작성해 주세요.
+    당신은 인스타그램 '@haruachim_med' 계정을 운영하는 수석 의학 에디터입니다.
+    의대생과 의료인이 읽었을 때 **"오, 이런 새로운 발견/방법이 있구나!"** 하고 무릎을 치게 만드는 흥미로운 최신 연구 2편을 골라, **연구 논문과 에세이 사이의 따뜻하고 명쾌한 어조**로 하루 2개의 게시물(각 6장 분량)을 작성해 주세요.
 
-    [1. 논문 2편 선별 기준 - 매우 중요]
-    - 아래 {len(candidates)}개의 후보 중 **반드시 서로 다른 임상 분과(예: 순환기내과 + 소화기내과, 내분비내과 + 호흡기내과, 종양내과 + 감염내과, 산부인과 + 소아청소년과 등)**에서 각각 1편씩 총 2편을 고르세요.
-    - 두 편이 같은 분과에 속하면 절대 안 되며, 특정 한 분과에 치우치지 않고 의학 전 분야를 골고루 다루세요.
-    - 대규모 코호트/임상시험(RCT), 기존의 의학적 통념을 검증하거나 뒤집는 연구, 주요 질환의 새로운 치료 패러다임을 제시하는 연구를 최우선으로 선택하세요.
+    [1. 흥미로운 연구 큐레이션 기준 - 가장 중요!]
+    아래 {len(candidates)}개의 후보 중 **반드시 서로 다른 임상 분과**에서 가장 흥미롭고 임팩트가 큰 연구 2편을 고르세요.
+
+    - **이런 연구를 최우선으로 고르세요 (BEST - 4가지 축의 균형):**
+      1. **기발하고 실용적인 새로운 치료법·대안:** 기존 처치보다 간편하거나 똑똑한 새로운 접근 (예: 구급차에서 IV 진통제 대신 흡입 진통제 사용, 수술 대신 항생제 치료, 주사제를 대체하는 먹는 약, 새로운 응급 처치법 등).
+      2. **흥미로운 의학적 발견·기전:** 인체의 새로운 생리학적 연결고리, 수면·식습관·운동·장내미생물·비만약(GLP-1 등)의 의외의 효과, 감염·백신·노화의 새로운 사실 등 지적 호기심을 자극하는 연구.
+      3. **기존 통념을 뒤집는 반전 결과:** 오랫동안 당연하게 해오던 치료·검사 관행을 다시 검증하거나 새로운 임상 기준을 제시하는 연구.
+      4. **진료실·응급실 실전 무기:** 외래나 응급실에서 환자와 보호자가 자주 묻는 질문에 최신 근거로 명쾌한 답을 줄 수 있는 연구.
+
+    - **이런 연구는 피하세요 (WORST - 일반 임상의·의대생에게 너무 지엽적인 주제):**
+      1. 특정 진행성 암의 3차·4차 표적항암제/면역항암제 무진행생존기간(PFS) 몇 개월 연장 비교 등 초전문의 영역의 신약 스펙 비교.
+      2. 유병률이 극히 낮은 희귀 유전질환·대사질환 연구.
+      3. 단순 유전자 바이오마커 탐색이나 결론이 모호한 연구.
 
     [2. 문체 및 작성 원칙]
+    - **표지 제목(`cover_title`):** 학술지 제목을 직역하지 말고, 읽는 사람의 호기심을 단번에 끄는 직관적이고 생동감 있는 2줄 카피로 뽑으세요.
     - **딱딱한 논문 요약투 금지:** "본 연구는 ~를 평가하고자 하였다", "통계적으로 유의한 차이를 보였다(p<0.001)" 같은 건조한 번역투를 절대 쓰지 마세요.
-    - **이야기하듯 풀어쓰기:** 실제 진료실에서 환자가 던지는 질문이나 임상 현장의 궁금증에서 수필처럼 자연스럽게 이야기를 시작하세요.
+    - **이야기하듯 풀어쓰기:** 실제 진료실이나 구급차, 응급실의 생생한 장면과 질문에서 수필처럼 자연스럽게 시작하세요.
     - **가독성 (4:5 카드 비율 최적화):** 각 슬라이드 본문은 3~4문장 이내로 호흡을 짧게 끊고, 문단 사이는 `<br><br>`로 나누세요. 핵심 구절은 `<b>강조할 내용</b>` 태그로 감싸세요 (슬라이드당 1~2곳).
     - **6번째 슬라이드(핵심 의학 개념 정리):** 통계·역학·연구방법론 용어는 절대 넣지 말고, 질환의 병태생리·생리학·약물 작용 기전(MOA) 등 **순수 의학 개념 2~3가지(영어 원어 병기)**만 알기 쉽게 정리하세요.
 
@@ -216,29 +226,29 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
       "posts": [
         {{
           "selected_index": 선택한 후보 번호 (0 ~ {len(candidates) - 1}),
-          "category": "분과 · 핵심 키워드 (예: 순환기내과 · 고지혈증)",
-          "cover_title": "표지 메인 타이틀 (호기심을 자극하는 질문형 또는 명쾌한 2줄 헤드라인, 줄바꿈은 <br> 사용)",
+          "category": "분과 · 핵심 키워드 (예: 응급의학과 · 통증 조절)",
+          "cover_title": "표지 메인 타이틀 (호기심을 자극하는 명쾌한 2줄 헤드라인, 줄바꿈은 <br> 사용)",
           "cover_subtitle": "표지 부제목 (연구가 던지는 핵심 메시지를 부드러운 1줄로 요약)",
           "slides": [
             {{
               "step": "01 · 진료실의 궁금증",
-              "heading": "이야기를 여는 소제목 (질문형 또는 맥락 제시)",
-              "body": "진료실에서 마주하는 환자의 질문이나 기존 치료의 한계, 오랫동안 이어진 의학적 논란을 수필처럼 자연스럽게 소개 (3~4문장, <br><br>로 문단 구분)"
+              "heading": "이야기를 여는 소제목 (질문형 또는 현장 장면 제시)",
+              "body": "임상 현장의 생생한 상황이나 기존 치료의 한계, 새로운 시도가 필요했던 배경을 수필처럼 자연스럽게 소개 (3~4문장, <br><br>로 문단 구분)"
             }},
             {{
               "step": "02 · 몸속에서 일어나는 일",
               "heading": "핵심 기전과 원리 소제목",
-              "body": "이 연구를 이해하기 위해 꼭 알아야 할 병태생리나 약물 작용 기전(MOA)을 비유와 정확한 의학 용어를 섞어 알기 쉽게 해설 (3~4문장, <br><br>로 문단 구분)"
+              "body": "이 연구의 핵심 약물·처치의 작용 기전(MOA)이나 병태생리를 비유와 정확한 의학 용어를 섞어 알기 쉽게 해설 (3~4문장, <br><br>로 문단 구분)"
             }},
             {{
               "step": "03 · 연구가 밝혀낸 사실",
               "heading": "연구 결과를 담은 소제목",
-              "body": "어떤 사람들을 얼마나 추적했는지, 그리고 실제로 어떤 결과가 나왔는지를 복잡한 통계 용어 없이 명쾌하게 전달 (3~4문장, <br><br>로 문단 구분)"
+              "body": "어떤 대상에게 어떻게 비교했고, 실제로 어떤 흥미로운 결과가 나왔는지를 복잡한 통계 용어 없이 명쾌하게 전달 (3~4문장, <br><br>로 문단 구분)"
             }},
             {{
               "step": "04 · 진료실 적용 포인트",
-              "heading": "환자에게 이렇게 설명해 보세요",
-              "body": "이 결과가 실제 진료와 환자 상담에 어떤 의미를 주는지, 어떤 환자에게 어떻게 적용할 수 있을지 명쾌하게 정리 (3~4문장, <br><br>로 문단 구분)"
+              "heading": "임상 현장의 새로운 시사점",
+              "body": "이 결과가 실제 진료와 환자 치료에 어떤 새로운 선택지를 주는지, 어떻게 활용할 수 있을지 명쾌하게 정리 (3~4문장, <br><br>로 문단 구분)"
             }}
           ],
           "key_concepts": [
@@ -258,7 +268,7 @@ def create_two_card_scripts(candidates: list[dict]) -> list[tuple[dict, dict]]:
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            temperature=0.5,
+            temperature=0.6,
         ),
     )
     result = json.loads(response.text)
@@ -496,8 +506,8 @@ def main():
         history = []
 
     print("1. PubMed 전 분과 최신 논문 검색 중...")
-    recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=50)
-    unseen_pmids = [p for p in recent_pmids if p not in history][:25]
+    recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=80)
+    unseen_pmids = [p for p in recent_pmids if p not in history][:35]
     candidates = fetch_candidates_details(unseen_pmids)
 
     if len(candidates) < 2:
