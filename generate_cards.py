@@ -21,21 +21,37 @@ OUTPUT_DIR = "output"
 HISTORY_FILE = "output/history.json"
 LATEST_FILE = "output/latest.json"
 
-# 인스타그램 피드 권장 4:5 비율 (1080 x 1350) + 가벼운 미세 종이 질감
+# 인스타그램 피드 권장 4:5 비율 (1080 x 1350) + (0,0) 고정 캔버스 컨테이너
 SHARED_TEXTURE_CSS = """
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
-    width: 1080px; height: 1350px;
-    aspect-ratio: 4 / 5;
-    font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
-    position: relative;
+    width: 1080px;
+    height: 1350px;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: hidden;
-    display: flex; flex-direction: column; justify-content: space-between;
-    padding: 80px 76px;
+    position: relative;
+    font-family: 'Noto Sans CJK KR', 'Noto Sans KR', sans-serif;
     word-break: keep-all;
   }
+  .canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1080px;
+    height: 1350px;
+    padding: 80px 76px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 2;
+  }
   .paper-weave {
-    position: absolute; inset: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1080px;
+    height: 1350px;
     pointer-events: none;
     z-index: 50;
     background-image:
@@ -274,20 +290,22 @@ def build_cover_html(data: dict, theme: dict) -> str:
         color: #FFFFFF;
       }}
       .grid-overlay {{
-        position: absolute; inset: 0; pointer-events: none;
+        position: absolute; top: 0; left: 0; width: 1080px; height: 1350px;
+        pointer-events: none;
         background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1.5px, transparent 1.5px);
         background-size: 32px 32px;
       }}
       .top-bar {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: {theme['cover_top_color']}; z-index: 2;
+        font-size: 26px; font-weight: 700; color: {theme['cover_top_color']};
       }}
       .badge {{
         background: {theme['cover_badge_bg']}; color: {theme['cover_badge_color']};
         border: 1px solid {theme['cover_badge_border']};
         padding: 12px 26px; border-radius: 999px; font-size: 25px;
       }}
-      .cover-main {{ margin: auto 0; z-index: 2; }}
+      .cover-main {{ width: 100%; margin: auto 0; }}
       .eyebrow {{
         display: inline-flex; align-items: center; gap: 10px;
         font-size: 25px; font-weight: 700; color: {theme['cover_eyebrow_color']};
@@ -300,26 +318,29 @@ def build_cover_html(data: dict, theme: dict) -> str:
       .cover-title {{ font-size: 66px; font-weight: 800; line-height: 1.32; margin-bottom: 34px; letter-spacing: -0.02em; }}
       .cover-sub {{ font-size: 34px; line-height: 1.6; color: #E2E8F0; font-weight: 400; }}
       .footer {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
         border-top: 2px solid rgba(255,255,255,0.18); padding-top: 30px;
-        font-size: 24px; color: #CBD5E1; font-weight: 600; z-index: 2;
+        font-size: 24px; color: #CBD5E1; font-weight: 600;
       }}
     </style></head>
     <body>
       <div class="paper-weave"></div>
       <div class="grid-overlay"></div>
-      <div class="top-bar">
-        <span class="badge">{data['category']}</span>
-        <span>하루아침_med</span>
-      </div>
-      <div class="cover-main">
-        <div class="eyebrow"><span class="sun-dot"></span> TODAY'S CLINICAL STORY</div>
-        <div class="cover-title">{data['cover_title']}</div>
-        <div class="cover-sub">{data['cover_subtitle']}</div>
-      </div>
-      <div class="footer">
-        <span>{data['journal']}</span>
-        <span>@haruachim_med · 밀어서 읽기 →</span>
+      <div class="canvas">
+        <div class="top-bar">
+          <span class="badge">{data['category']}</span>
+          <span>하루아침_med</span>
+        </div>
+        <div class="cover-main">
+          <div class="eyebrow"><span class="sun-dot"></span> TODAY'S CLINICAL STORY</div>
+          <div class="cover-title">{data['cover_title']}</div>
+          <div class="cover-sub">{data['cover_subtitle']}</div>
+        </div>
+        <div class="footer">
+          <span>{data['journal']}</span>
+          <span>@haruachim_med · 밀어서 읽기 →</span>
+        </div>
       </div>
     </body></html>
     """
@@ -339,46 +360,50 @@ def build_body_html(data: dict, slide: dict, page_num: int, theme: dict) -> str:
         color: #1E293B;
       }}
       .top-bar {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: {theme['primary_dark']}; z-index: 2;
+        font-size: 26px; font-weight: 700; color: {theme['primary_dark']};
       }}
       .page-pill {{
         background: {theme['pill_bg']}; color: {theme['primary']};
         padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .content-box {{
+        width: 100%;
         background: #FFFFFF; border-radius: 32px; padding: 58px 54px;
         box-shadow: 0 14px 36px {theme['card_shadow']};
         border: 2px solid {theme['card_border']};
         border-top: 12px solid {theme['primary']};
         flex-grow: 1; margin: 38px 0;
         display: flex; flex-direction: column; justify-content: center;
-        z-index: 2;
       }}
       .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 16px; }}
       .heading {{ font-size: 45px; font-weight: 800; line-height: 1.34; margin-bottom: 36px; color: #0F172A; letter-spacing: -0.01em; }}
       .body-text {{ font-size: 34px; line-height: 1.7; color: #334155; }}
       b {{ color: {theme['bold_color']}; background: {theme['bold_bg']}; padding: 3px 10px; border-radius: 7px; font-weight: 700; }}
       .footer {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
         border-top: 2px solid {theme['card_border']}; padding-top: 30px;
-        font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
+        font-size: 24px; color: #475569; font-weight: 600;
       }}
     </style></head>
     <body>
       <div class="paper-weave"></div>
-      <div class="top-bar">
-        <span>하루아침_med</span>
-        <span class="page-pill">{page_num} / 6</span>
-      </div>
-      <div class="content-box">
-        <div class="step-label">{slide['step']}</div>
-        <div class="heading">{slide['heading']}</div>
-        <div class="body-text">{slide['body']}</div>
-      </div>
-      <div class="footer">
-        <span>{data['journal']} · PMID {data['pmid']}</span>
-        <span>@haruachim_med</span>
+      <div class="canvas">
+        <div class="top-bar">
+          <span>하루아침_med</span>
+          <span class="page-pill">{page_num} / 6</span>
+        </div>
+        <div class="content-box">
+          <div class="step-label">{slide['step']}</div>
+          <div class="heading">{slide['heading']}</div>
+          <div class="body-text">{slide['body']}</div>
+        </div>
+        <div class="footer">
+          <span>{data['journal']} · PMID {data['pmid']}</span>
+          <span>@haruachim_med</span>
+        </div>
       </div>
     </body></html>
     """
@@ -410,17 +435,18 @@ def build_concepts_html(data: dict, theme: dict) -> str:
         color: #1E293B;
       }}
       .top-bar {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
-        font-size: 26px; font-weight: 700; color: {theme['primary_dark']}; z-index: 2;
+        font-size: 26px; font-weight: 700; color: {theme['primary_dark']};
       }}
       .page-pill {{
         background: {theme['pill_bg']}; color: {theme['primary']};
         padding: 8px 22px; border-radius: 999px; font-size: 24px; font-weight: 800;
       }}
       .main-area {{
+        width: 100%;
         flex-grow: 1; margin: 34px 0;
         display: flex; flex-direction: column; justify-content: center;
-        z-index: 2;
       }}
       .step-label {{ font-size: 26px; font-weight: 800; color: {theme['primary']}; margin-bottom: 14px; }}
       .heading {{ font-size: 44px; font-weight: 800; line-height: 1.3; margin-bottom: 32px; color: #0F172A; }}
@@ -434,25 +460,28 @@ def build_concepts_html(data: dict, theme: dict) -> str:
       .concept-term {{ font-size: 31px; font-weight: 800; margin-bottom: 10px; }}
       .concept-desc {{ font-size: 28px; line-height: 1.6; color: #334155; }}
       .footer {{
+        width: 100%;
         display: flex; justify-content: space-between; align-items: center;
         border-top: 2px solid {theme['card_border']}; padding-top: 30px;
-        font-size: 24px; color: #475569; font-weight: 600; z-index: 2;
+        font-size: 24px; color: #475569; font-weight: 600;
       }}
     </style></head>
     <body>
       <div class="paper-weave"></div>
-      <div class="top-bar">
-        <span>하루아침_med</span>
-        <span class="page-pill">6 / 6</span>
-      </div>
-      <div class="main-area">
-        <div class="step-label">05 · KEY MEDICAL CONCEPTS</div>
-        <div class="heading">함께 알아둘 핵심 의학 개념</div>
-        {cards_html}
-      </div>
-      <div class="footer">
-        <span>저장해 두고 복습하세요 📌</span>
-        <span>@haruachim_med</span>
+      <div class="canvas">
+        <div class="top-bar">
+          <span>하루아침_med</span>
+          <span class="page-pill">6 / 6</span>
+        </div>
+        <div class="main-area">
+          <div class="step-label">05 · KEY MEDICAL CONCEPTS</div>
+          <div class="heading">함께 알아둘 핵심 의학 개념</div>
+          {cards_html}
+        </div>
+        <div class="footer">
+          <span>저장해 두고 복습하세요 📌</span>
+          <span>@haruachim_med</span>
+        </div>
       </div>
     </body></html>
     """
